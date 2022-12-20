@@ -1,7 +1,8 @@
 from typing import Type
-
 import cantera as ct
 import numpy as np
+import concurrent.futures
+import itertools
 
 
 class Simulation:
@@ -17,13 +18,13 @@ class Simulation:
     """
 
     def __init__(
-            self,
-            gas: ct.Solution | str,
-            T: float,
-            P: float,
-            X: str | dict[str, float],
-            *,
-            reactor: ct.Reactor | Type[ct.Reactor] = ct.Reactor
+        self,
+        gas: ct.Solution | str,
+        T: float,
+        P: float,
+        X: str | dict[str, float],
+        *,
+        reactor: ct.Reactor | Type[ct.Reactor] = ct.Reactor,
     ):
         """
 
@@ -38,17 +39,24 @@ class Simulation:
 
         self.gas = gas if isinstance(gas, ct.Solution) else ct.Solution(gas)
         self.gas.TPX = T, P, X
+        self.TPX = T, P, X
 
         try:
-            if isinstance(reactor, ct.Reactor):  # ct.Reactor is considered to be a subclass of itself
+            if isinstance(
+                reactor, ct.Reactor
+            ):  # ct.Reactor is considered to be a subclass of itself
                 self.reactor = reactor
                 self.reactor.insert(self.gas)
-            elif issubclass(reactor, ct.Reactor):  # Raises TypeError if argument is not a class
+            elif issubclass(
+                reactor, ct.Reactor
+            ):  # Raises TypeError if argument is not a class
                 self.reactor = reactor(self.gas)
             else:
                 raise TypeError
         except TypeError:
-            raise TypeError("Reactor argument must be a ct.Reactor object or subclass.") from None
+            raise TypeError(
+                "Reactor argument must be a ct.Reactor object or subclass."
+            ) from None
 
         self.reactor_net = ct.ReactorNet([self.reactor])
         self.states = ct.SolutionArray(self.gas, extra=["t"])
@@ -56,8 +64,8 @@ class Simulation:
         self.states.append(self.reactor.thermo.state, t=0)  # Add initial state
 
     def run(
-            self,
-            t: float = 10e-3,
+        self,
+        t: float = 10e-3,
     ):
         """
         Args:
@@ -97,7 +105,9 @@ class Simulation:
         """
         return self.states(species).X.flatten()
 
-    def ignition_delay_time(self, species: str = None, *, method: str = "inflection") -> float:
+    def ignition_delay_time(
+        self, species: str = None, *, method: str = "inflection"
+    ) -> float:
         """
         Calculates the ignition delay time from the reactor temperature history, or species mole fraction if given,
         using the specified method.
@@ -128,9 +138,13 @@ class Simulation:
             i = np.argmax(x)
             return self.t[i] if i != len(self.t) - 1 else np.nan
         else:
-            raise ValueError(f"Invalid method '{method}'; valid methods are 'inflection' and 'peak'.")
+            raise ValueError(
+                f"Invalid method '{method}'; valid methods are 'inflection' and 'peak'."
+            )
 
-    def get_top_species(self, n: int = None, *, exclude: str | list[str] = None) -> list[str]:
+    def get_top_species(
+        self, n: int = None, *, exclude: str | list[str] = None
+    ) -> list[str]:
         """
         Returns the top `n` species by mole fraction in descending order. If `n` is not given,
         all non-excluded species are returned.
@@ -145,7 +159,9 @@ class Simulation:
         """
 
         X_max = np.max(self.states.X.T, axis=1)
-        species = [t[1] for t in sorted(zip(X_max, self.states.species_names), reverse=True)]
+        species = [
+            t[1] for t in sorted(zip(X_max, self.states.species_names), reverse=True)
+        ]
 
         if exclude is not None:
             if isinstance(exclude, str):
@@ -158,3 +174,54 @@ class Simulation:
 
         return species[:n]
 
+
+class SimulationPool:
+    def __init__(
+        self,
+        mech_paths: list,
+        mixtures: dict,
+        pressures: np.array,
+        temps: np.array,
+        *,
+        nProcs=None,
+    ):
+        self.mech_paths = mech_paths
+        self.mechs = {}
+        self.mixtures = mixtures
+        self.pressures = pressures
+        self.temps = temps
+        self.nProcs = nProcs
+
+    def parallel(self):
+        tupled_inputs = list(
+            itertools.product(
+                self.mech_paths, self.mixtures, self.pressures, self.temps
+            )
+        )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.nProcs) as executor:
+            results = list(executor.map(self.run, tupled_inputs))
+
+        return results
+
+    def init_process(self, mech):
+        self.mechs[mech] = ct.Solution(mech)
+
+    def run(self, args):
+        mech, mix, P, T = args
+        X = self.mixtures[mix]
+        self.init_process(mech)
+        gas = self.mechs[mech]
+        gas.TPX = T, P, X
+        sim = Simulation(gas, T, P, X)
+        return sim.run()
+
+    def serial(self):
+        tupled_inputs = list(
+            itertools.product(
+                self.mech_paths, self.mixtures, self.pressures, self.temps
+            )
+        )
+
+        results = list(map(self.run, tupled_inputs))
+        return results
