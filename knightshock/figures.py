@@ -104,17 +104,30 @@ class IDTFigure:
         return c
 
     def add_sim(
-        self, T: int | float | npt.ArrayLike, IDT: int | float | npt.ArrayLike, **kwargs
+        self,
+        T: int | float | npt.ArrayLike,
+        IDT: int | float | npt.ArrayLike,
+        *args,
+        mask: bool = False,
+        **kwargs
     ) -> list[mpl.lines.Line2D]:
         """Add ignition delay model predictions to the figure.
 
         Args:
             T: Temperatures [K].
             IDT: Ignition delay times [[`units`][knightshock.figures.IDTFigure.units]].
+            mask: Mask all zero and `nan` values.
 
         """
         T = np.asarray(T)
-        (ln,) = self.ax.plot(1000 / T, IDT, **(self.sim_props | kwargs))
+        IDT = np.asarray(IDT)
+
+        if mask:
+            mask = ~np.all(np.isnan(IDT) | np.equal(IDT, 0))
+            T = T[mask]
+            IDT = IDT[mask]
+
+        (ln,) = self.ax.plot(1000 / T, IDT, *args, **(self.sim_props | kwargs))
 
         self.sim_handles.append(ln)
         self.sim_labels.append(kwargs["label"] if "label" in kwargs else None)
