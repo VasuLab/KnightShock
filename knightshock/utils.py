@@ -1,4 +1,3 @@
-
 def format_mixture(mixture: str | dict) -> dict[str, float]:
     if isinstance(mixture, dict):
         return dict((x.strip().upper(), float(y)) for x, y in mixture.items())
@@ -7,7 +6,6 @@ def format_mixture(mixture: str | dict) -> dict[str, float]:
         if ":" not in mixture:
             return {mixture.strip(): 1}
         else:
-
             return dict(
                 (x.strip(), float(y))
                 for x, y in (element.split(":") for element in (mixture.split(",")))

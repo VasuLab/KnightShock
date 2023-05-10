@@ -47,4 +47,3 @@ def test_raises_type_error():
     """Test that a TypeError is raised when a str or dict is not given."""
     with pytest.raises(TypeError):
         format_mixture(("O2: 0.21", "N2: 0.79"))
-
