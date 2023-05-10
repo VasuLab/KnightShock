@@ -15,7 +15,7 @@ def absorbance(
 
     Args:
         X: Species mole fraction.
-        sigma: Absorption cross-section [cm^2^].
+        sigma: Absorption cross-section [cm^2^/molecule].
         T: Absolute temperature [K].
         P: Absolute pressure [Pa].
         L: Path length [cm] (optional).
@@ -44,7 +44,7 @@ def absorption_cross_section(
         L: Path length [cm].
 
     Returns:
-        sigma: Absorption cross-section [cm^2^].
+        sigma: Absorption cross-section [cm^2^/molecule].
 
     """
 
@@ -62,7 +62,7 @@ def species_mole_fraction(
 
     Args:
         A: Absorbance.
-        sigma: Absorption cross-section [cm^2^].
+        sigma: Absorption cross-section [cm^2^/molecule].
         T: Absolute temperature [K].
         P: Absolute pressure [Pa].
         L: Path length [cm].
