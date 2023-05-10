@@ -1,5 +1,10 @@
+black
 cantera
 matplotlib
 numpy
 pytest
+pytest-cov
 rgfrosh >= 0.2.0
+mkdocs-material
+mkdocstrings-python
+mkdocs-jupyter
