@@ -1,0 +1,5 @@
+cantera
+matplotlib
+numpy
+pytest
+rgfrosh >= 0.2.0
