@@ -68,6 +68,9 @@ class IDTFigure:
         )
         self.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter("{x:.0f}"))
 
+        self.T_lim = 1000, 1500
+        self.IDT_lim = 100, 1000
+
     def add_exp(
         self,
         T: int | float | npt.ArrayLike,
